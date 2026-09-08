@@ -179,7 +179,7 @@ Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` s
 
 ---
 
-## 🤖 Google Gemini AI Setup
+## Google Gemini AI Setup
 
 1. Visit [Google AI Studio](https://aistudio.google.com/).
 2. Click **Get API key** and generate a new key.
@@ -187,7 +187,7 @@ Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` s
 
 ---
 
-## ⚙️ Environment Variables Reference
+## Environment Variables Reference
 
 | Variable Name | Description | Default / Example |
 | :--- | :--- | :--- |
@@ -224,6 +224,6 @@ Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` s
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
