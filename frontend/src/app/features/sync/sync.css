@@ -1,0 +1,66 @@
+.sync-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sync-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+}
+
+.date-input {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  width: 120px;
+}
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.to {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sync-icon, .spinner {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+  opacity: 0.7;
+}
+
+.status-message {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--success);
+}
+.status-message.error {
+  color: var(--danger);
+}

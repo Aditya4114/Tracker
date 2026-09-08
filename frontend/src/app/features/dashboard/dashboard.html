@@ -1,0 +1,401 @@
+<div class="dashboard-layout fade-in">
+  <!-- Sidebar -->
+  <aside class="sidebar glass-panel">
+    <div class="brand">
+      <div class="logo-icon-small">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        </svg>
+      </div>
+      <h3>Job Tracker</h3>
+    </div>
+    
+    <nav class="nav-menu">
+      <a class="nav-item" [class.active]="activeView === 'overview'" (click)="switchView('overview')">
+        Overview
+      </a>
+      <a class="nav-item nav-with-badge" [class.active]="activeView === 'applications'" (click)="switchView('applications')">
+        <span>Applications</span>
+        <span class="badge warning-badge" *ngIf="pendingEmails.length > 0">{{ pendingEmails.length }}</span>
+      </a>
+      <a class="nav-item disabled-nav">Settings</a>
+    </nav>
+    
+    <div class="mt-auto">
+      <button class="btn-secondary w-full text-left" (click)="logout()">
+        Log Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- OVERVIEW VIEW -->
+    <div *ngIf="activeView === 'overview'">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Overview</h1>
+          <p class="subtitle">Track your career progress</p>
+        </div>
+        
+        <!-- Sync Widget -->
+        <app-sync (dateRangeChange)="onDateRangeChange($event)" (syncCompleted)="onSyncCompleted()"></app-sync>
+      </header>
+
+      <!-- Safety Net Notification Banner if pending emails exist -->
+      <div *ngIf="pendingEmails.length > 0" class="alert-banner glass-panel" (click)="switchView('applications')">
+        <div class="alert-icon">📬</div>
+        <div class="alert-content">
+          <strong>{{ pendingEmails.length }} Unconfirmed Incoming Email{{ pendingEmails.length > 1 ? 's' : '' }}</strong>
+          <p>The safety net caught ambiguous emails. Review them in the Applications Hub to train the classifier.</p>
+        </div>
+        <button class="btn-primary btn-sm">Review Now</button>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card glass-panel">
+          <div class="metric-title">Total Applications</div>
+          <div class="metric-value">{{ metrics.totalApplications }}</div>
+          <div class="metric-trend positive" *ngIf="metrics.totalApplications > 0">In selected date range</div>
+        </div>
+        <div class="metric-card glass-panel">
+          <div class="metric-title">In Progress</div>
+          <div class="metric-value">{{ metrics.inProgress }}</div>
+        </div>
+        <div class="metric-card glass-panel">
+          <div class="metric-title">Rejected</div>
+          <div class="metric-value">{{ metrics.rejected }}</div>
+        </div>
+        <div class="metric-card glass-panel">
+          <div class="metric-title">Response Rate</div>
+          <div class="metric-value">{{ metrics.responseRate }}%</div>
+        </div>
+      </div>
+
+      <!-- Manual Review Section (Missing Company/Position) -->
+      <div class="review-section glass-panel">
+        <div class="section-header">
+          <div>
+            <h3>Needs Field Edit</h3>
+            <p class="section-subtext">Parsed job applications with missing company or position</p>
+          </div>
+          <span class="badge warning">{{ manualReviewList.length }} pending</span>
+        </div>
+        
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="manualReviewList.length === 0">
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                  🎉 All applications in this date range are fully parsed! No edits needed.
+                </td>
+              </tr>
+              <tr *ngFor="let item of manualReviewList">
+                <td>{{ item.appliedDate | date:'mediumDate' }}</td>
+                <td>
+                  <span [class.missing-data]="isMissing(item.company)">
+                    {{ isMissing(item.company) ? 'Not Available' : item.company }}
+                  </span>
+                </td>
+                <td>
+                  <span [class.missing-data]="isMissing(item.position)">
+                    {{ isMissing(item.position) ? 'Not Available' : item.position }}
+                  </span>
+                </td>
+                <td>{{ item.currentStatus }}</td>
+                <td>
+                  <button class="btn-text" (click)="openEditModal(item)">Edit</button>
+                  <button class="btn-text-danger" (click)="markApplicationAsSpam(item)" [disabled]="isDeletingSpam[item.id]">
+                    {{ isDeletingSpam[item.id] ? 'Spamming...' : 'Spam' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICATIONS HUB VIEW -->
+    <div *ngIf="activeView === 'applications'">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Applications Hub</h1>
+          <p class="subtitle">Review incoming emails and manage your job pipeline</p>
+        </div>
+        <button class="btn-secondary" (click)="switchView('overview')">← Back to Overview</button>
+      </header>
+
+      <!-- Feedback Toast Notification -->
+      <div *ngIf="feedbackMessage" class="toast-banner fade-in">
+        {{ feedbackMessage }}
+      </div>
+
+      <!-- Applications Tab Switcher -->
+      <div class="tab-switcher">
+        <button class="tab-btn" [class.active]="activeAppTab === 'unconfirmed'" (click)="switchAppTab('unconfirmed')">
+          Unconfirmed Emails
+          <span class="badge warning-badge ml-2" *ngIf="pendingEmails.length > 0">{{ pendingEmails.length }}</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeAppTab === 'needsEdit'" (click)="switchAppTab('needsEdit')">
+          Needs Field Edit
+          <span class="badge ml-2" *ngIf="manualReviewList.length > 0">{{ manualReviewList.length }}</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeAppTab === 'all'" (click)="switchAppTab('all')">
+          All Applications
+          <span class="badge ml-2">{{ allApplications.length }}</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: UNCONFIRMED EMAILS (HITL SAFETY NET) -->
+      <div *ngIf="activeAppTab === 'unconfirmed'" class="review-section glass-panel">
+        <div class="section-header">
+          <div>
+            <h3>Unconfirmed Incoming Emails</h3>
+            <p class="section-subtext">
+              The Bayesian classifier caught these ambiguous emails. Mark as <strong>Job Application</strong> to train the model and extract details, or <strong>Not a Job</strong> to filter future spam.
+            </p>
+          </div>
+          <span class="badge warning">{{ pendingEmails.length }} awaiting review</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 110px;">Date</th>
+                <th style="width: 180px;">Sender</th>
+                <th>Subject & Preview</th>
+                <th style="width: 140px;">Context</th>
+                <th style="width: 210px; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="pendingEmails.length === 0">
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 36px;">
+                  🛡️ The safety net queue is empty! No ambiguous emails need review.
+                </td>
+              </tr>
+              <tr *ngFor="let email of pendingEmails">
+                <td>{{ email.receivedDate | date:'mediumDate' }}</td>
+                <td class="sender-cell" [title]="email.sender">{{ email.sender }}</td>
+                <td>
+                  <div class="email-subject-line">{{ email.subject }}</div>
+                  <div class="email-snippet-line" *ngIf="email.snippet">"{{ email.snippet }}"</div>
+                </td>
+                <td>
+                  <a *ngIf="email.gmailLink" [href]="email.gmailLink" target="_blank" rel="noopener noreferrer" class="email-link">
+                    <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Open in Gmail
+                  </a>
+                </td>
+                <td style="text-align: right;">
+                  <div class="action-btn-group">
+                    <button class="btn-action-job" 
+                            (click)="submitEmailFeedback(email.id, true)" 
+                            [disabled]="isProcessingFeedback[email.id]"
+                            title="Confirm as legitimate job application">
+                      {{ isProcessingFeedback[email.id] ? '...' : '✔ Job' }}
+                    </button>
+                    <button class="btn-action-spam" 
+                            (click)="submitEmailFeedback(email.id, false)" 
+                            [disabled]="isProcessingFeedback[email.id]"
+                            title="Dismiss as promotional or not a job application">
+                      {{ isProcessingFeedback[email.id] ? '...' : '✖ Not Job' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: NEEDS FIELD EDIT -->
+      <div *ngIf="activeAppTab === 'needsEdit'" class="review-section glass-panel">
+        <div class="section-header">
+          <div>
+            <h3>Applications Missing Fields</h3>
+            <p class="section-subtext">These applications were confirmed as jobs but need company or role details filled in.</p>
+          </div>
+          <span class="badge warning">{{ manualReviewList.length }} pending</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Status</th>
+                <th>Context</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="manualReviewList.length === 0">
+                <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 36px;">
+                  🎉 All applications have complete company and role details!
+                </td>
+              </tr>
+              <tr *ngFor="let item of manualReviewList">
+                <td>{{ item.appliedDate | date:'mediumDate' }}</td>
+                <td>
+                  <span [class.missing-data]="isMissing(item.company)">
+                    {{ isMissing(item.company) ? 'Not Available' : item.company }}
+                  </span>
+                </td>
+                <td>
+                  <span [class.missing-data]="isMissing(item.position)">
+                    {{ isMissing(item.position) ? 'Not Available' : item.position }}
+                  </span>
+                </td>
+                <td>{{ item.currentStatus }}</td>
+                <td>
+                  <a *ngIf="item.gmailLink" [href]="item.gmailLink" target="_blank" rel="noopener noreferrer" class="email-link">
+                    <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Gmail
+                  </a>
+                </td>
+                <td>
+                  <button class="btn-text" (click)="openEditModal(item)">Edit</button>
+                  <button class="btn-text-danger" (click)="markApplicationAsSpam(item)" [disabled]="isDeletingSpam[item.id]">
+                    {{ isDeletingSpam[item.id] ? 'Spamming...' : 'Spam' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: ALL APPLICATIONS -->
+      <div *ngIf="activeAppTab === 'all'" class="review-section glass-panel">
+        <div class="section-header">
+          <div>
+            <h3>All Tracked Applications</h3>
+            <p class="section-subtext">All job applications tracked in the current selected sync range.</p>
+          </div>
+          <span class="badge positive-badge">{{ allApplications.length }} total</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Status</th>
+                <th>Job ID</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="allApplications.length === 0">
+                <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 36px;">
+                  No applications found in this date range. Click "Sync Now" to fetch recent applications.
+                </td>
+              </tr>
+              <tr *ngFor="let app of allApplications">
+                <td>{{ app.appliedDate | date:'mediumDate' }}</td>
+                <td><strong>{{ app.company }}</strong></td>
+                <td>{{ app.position }}</td>
+                <td>
+                  <span class="status-pill" [ngClass]="'status-' + (app.currentStatus | lowercase)">
+                    {{ app.currentStatus }}
+                  </span>
+                </td>
+                <td>{{ app.jobId !== 'Not Available' ? app.jobId : '—' }}</td>
+                <td>
+                  <a *ngIf="app.gmailLink" [href]="app.gmailLink" target="_blank" rel="noopener noreferrer" class="email-link">
+                    Open
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal (Shared) -->
+    <div class="modal-backdrop fade-in" *ngIf="showEditModal">
+      <div class="modal-card glass-panel">
+        <div class="modal-header">
+          <h3>Review Application Details</h3>
+          <button class="btn-close" (click)="closeEditModal()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div *ngIf="selectedReviewItem?.emailSubject || selectedReviewItem?.emailSnippet || selectedReviewItem?.gmailLink" class="email-context-box">
+            <div *ngIf="selectedReviewItem?.emailSubject" class="email-subject">
+              <strong>Subject:</strong> {{ selectedReviewItem.emailSubject }}
+            </div>
+            <div *ngIf="selectedReviewItem?.emailSnippet" class="email-snippet">
+              <strong>Preview:</strong> "{{ selectedReviewItem.emailSnippet }}"
+            </div>
+            <div *ngIf="selectedReviewItem?.gmailLink" class="mt-2">
+              <a [href]="selectedReviewItem.gmailLink" target="_blank" rel="noopener noreferrer" class="email-link">
+                <svg class="mail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Open in Gmail
+              </a>
+            </div>
+          </div>
+
+          <div *ngIf="editError" class="modal-error">
+            {{ editError }}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input type="text" class="input-field" [(ngModel)]="selectedReviewItem.company" placeholder="e.g. Google, Amazon" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Position / Role</label>
+            <input type="text" class="input-field" [(ngModel)]="selectedReviewItem.position" placeholder="e.g. Senior Software Engineer" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Application Status</label>
+            <select class="input-field select-field" [(ngModel)]="selectedReviewItem.currentStatus">
+              <option value="Applied">Applied</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Interview">Interview</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-danger-outline" style="margin-right: auto;" (click)="markApplicationAsSpam(selectedReviewItem)" [disabled]="isSavingEdit || isDeletingSpam[selectedReviewItem?.id]">
+            {{ isDeletingSpam[selectedReviewItem?.id] ? 'Marking Spam...' : 'Mark as Spam & Delete' }}
+          </button>
+          <button class="btn-secondary" (click)="closeEditModal()" [disabled]="isSavingEdit || isDeletingSpam[selectedReviewItem?.id]">Cancel</button>
+          <button class="btn-primary" (click)="saveEdit()" [disabled]="isSavingEdit || isDeletingSpam[selectedReviewItem?.id]">
+            {{ isSavingEdit ? 'Saving...' : 'Save & Update' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
