@@ -1,4 +1,4 @@
-# Job Tracker 🎯
+# Job Tracker 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java: 17](https://img.shields.io/badge/Java-17-orange.svg)](https://openjdk.org/)
@@ -12,7 +12,7 @@
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
@@ -65,7 +65,7 @@ graph TD
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 - **Automated Gmail Synchronization:** Query your inbox for application updates within a customizable range (up to 30 days). Strictly searches for recruitment and job notification patterns.
 - **Multi-Tiered Extraction Engine:**
@@ -85,7 +85,7 @@ graph TD
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before running the project locally, ensure you have the following installed:
 
@@ -97,7 +97,7 @@ Before running the project locally, ensure you have the following installed:
 
 ---
 
-## 🚀 Quickstart Local Setup
+## Quickstart Local Setup
 
 ### 1. Clone the Repository
 ```bash
@@ -144,7 +144,7 @@ Open your browser and navigate to `http://localhost:4200`.
 
 ---
 
-## 🔑 Google Cloud OAuth 2.0 Setup Guide
+## Google Cloud OAuth 2.0 Setup Guide
 
 Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` scope, configure Google Cloud Console as follows:
 
@@ -205,7 +205,7 @@ Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` s
 
 ---
 
-## 🔒 Security & Compliance
+## Security & Compliance
 
 - **Zero Hardcoded Secrets:** All credentials, keys, and tokens are read strictly from environment variables or ignored `.env` files.
 - **Automated Secret Scanning:** Continuous integration scans all commits using [Gitleaks](https://github.com/gitleaks/gitleaks) to prevent accidental credential leakage.
@@ -214,7 +214,7 @@ Because Job Tracker interacts with Gmail using the restricted `gmail.readonly` s
 
 ---
 
-## 📜 Legal & Policies
+## Legal & Policies
 
 - [Privacy Policy](PRIVACY.md)
 - [Terms and Conditions](TERMS.md)
