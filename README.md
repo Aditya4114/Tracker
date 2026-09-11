@@ -67,21 +67,67 @@ graph TD
 
 ## Key Features
 
-- **Automated Gmail Synchronization:** Query your inbox for application updates within a customizable range (up to 30 days). Strictly searches for recruitment and job notification patterns.
-- **Multi-Tiered Extraction Engine:**
-  1. **Strict Query Filters:** Only targets application status emails.
-  2. **Regex Heuristics:** Instant, local extraction of companies, job IDs, and status.
-  3. **Gemini AI Validation:** Truncates body text to 5,000 characters and sends it to `gemini-3.5-flash-lite` for entity validation and missing field repair.
-  4. **Bayesian Safety Net:** Ambiguous emails are routed to a human-in-the-loop review tab, training the local classifier upon review.
-- **Enterprise-Grade Security:**
-  - Zero plaintext secrets in repository.
-  - Google OAuth refresh tokens encrypted at rest with **AES-256**.
-  - Passwords hashed with BCrypt.
-  - Authenticated session management via signed JWTs.
-- **Comprehensive Compliance & Privacy:**
-  - Compliant with **Google API Services User Data Policy** and **Limited Use requirements**.
-  - In-app Privacy Policy, Terms of Service, Cookie Policy, and Interactive Cookie Consent Banner.
-  - Explicit user data usage consent required on registration.
+### 1. Career Pipeline & Real-Time Analytics Dashboard
+- **Dynamic Metrics Grid:** Instant visibility into key job search metrics for any selected date range:
+  - **Total Applications:** Total volume of tracked submissions.
+  - **In-Progress Applications:** Active opportunities currently in review or interview stages.
+  - **Rejection Counter:** Consolidated count of closed applications.
+  - **Calculated Response Rate:** Real-time percentage of applications that received an employer response versus unanswered applications.
+- **Customizable Date-Range Window:** Interactive date pickers allowing sync and metric evaluation across custom date windows (from 7 days up to a 30-day safety limit).
+
+---
+
+### 2. Multi-Tab Applications Hub & Triage Queues
+- **Human-in-the-Loop (HITL) Safety Net Queue:**
+  - Ambiguous or non-standard emails that cannot be classified with high confidence are routed to an **Unconfirmed Emails** queue.
+  - Displays sender address, subject line, and an excerpt snippet.
+  - **One-Click Triage:** Reviewers can click **`✔ Job`** to confirm and parse the application or **`✖ Not Job`** to dismiss it.
+  - Dynamic badge counters alert users when unconfirmed emails require attention.
+- **Needs Field Edit Queue:**
+  - Automatically isolates parsed applications that have missing or ambiguous fields (such as missing Company Name or Job Title marked as "Not Available").
+  - Provides a built-in modal editor for fast manual field corrections.
+- **Direct Gmail Deep-Linking:**
+  - Every application record includes a direct `Open in Gmail` link targeting the exact Gmail message ID (`https://mail.google.com/mail/u/0/#all/{messageId}`), enabling users to view the original email context in one click.
+- **False-Positive "Mark as Spam" Action:**
+  - Users can mark any wrongly captured application as spam directly from the dashboard, removing the record and training the classifier to ignore similar emails in the future.
+
+---
+
+### 3. Self-Training Bayesian Machine Learning Engine
+- **Continuous Online Active Learning:**
+  - User feedback from the Safety Net queue and "Mark as Spam" triggers immediate, in-memory updates to the Naive Bayes vocabulary and class probability distributions.
+  - Model states and token counts are persisted asynchronously to PostgreSQL (`GlobalModelState`), allowing the classifier to become progressively smarter over time.
+- **Fast-Pass ATS Recognition:**
+  - Built-in recognition for dedicated Applicant Tracking Systems (ATS) including Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, Taleo, BambooHR, Jobvite, Breezy HR, Rippling, and Workable.
+- **Safety Net Invariant:**
+  - An email is **never silently dropped** unless its sender domain has been confirmed as spam at least twice. Uncertain emails always fall back to the user review queue.
+
+---
+
+### 4. Intelligent Incremental Sync & Quota Optimization
+- **Contiguous Date Range Grouping:**
+  - `DailySyncLog` tracks all calendar dates already synchronized for each user.
+  - When a sync is requested, the system computes only the **missing/unsynced dates**, groups them into contiguous query blocks, and executes minimal, targeted Gmail API calls.
+  - Conserves Gmail API quotas and accelerates sync performance.
+- **Strict Deduplication Pipeline:**
+  - Skips emails if their Gmail Message ID has already been recorded in `ProcessedEmail`.
+  - Collision avoidance: Skips duplicate entries if an application for the same company has already been logged on the same calendar day.
+- **Asynchronous Execution:**
+  - Sync tasks run asynchronously in the background (`@Async` with `CompletableFuture`), providing non-blocking UI interactions and live status feedback.
+
+---
+
+### 5. Multi-Stage AI & Heuristic Parsing Pipeline
+- **Heuristic Regex Extraction:** Instant, local extraction of company names, job titles, and status keywords from email subjects and bodies.
+- **Gemini AI Cross-Validation:**
+  - Automatically truncates email bodies to 5,000 characters to optimize token efficiency and latency.
+  - Sends the excerpt and preliminary regex data to Google Gemini Flash API (`gemini-3.5-flash-lite`) to validate ambiguous company names, recover obscure job titles, and normalize application statuses.
+  - Robust fallback: If the Gemini API hits a rate limit or network issue, the pipeline gracefully falls back to local regex extraction without dropping data.
+
+---
+
+### 6. Application Event Lifecycle & Timeline
+- Extensible event timeline model (`ApplicationEvent`) that logs historical status transitions (e.g., `Applied` ➔ `Interview` ➔ `Offer` / `Rejected`) with timestamps for every tracked job application.
 
 ---
 
