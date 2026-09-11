@@ -89,3 +89,4 @@ logs/
 *.seed
 *.pid.lock
 postgres_data/
+Implementation.md
