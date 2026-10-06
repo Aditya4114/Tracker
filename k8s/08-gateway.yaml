@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: jobtracker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: tracker/gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: AUTH_SERVICE_URI
+              value: "http://auth-service:8081"
+            - name: INGESTION_SERVICE_URI
+              value: "http://ingestion-service:8082"
+            - name: INTELLIGENCE_SERVICE_URI
+              value: "http://intelligence-service:8083"
+            - name: CORE_SERVICE_URI
+              value: "http://core-service:8084"
+            - name: MONOLITH_URI
+              value: "http://core-service:8084"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 25
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: jobtracker
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jobtracker-ingress
+  namespace: jobtracker
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-service
+                port:
+                  number: 8000
